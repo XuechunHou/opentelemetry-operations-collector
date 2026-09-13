@@ -1,11 +1,13 @@
 module github.com/GoogleCloudPlatform/opentelemetry-operations-collector/components/google-built-opentelemetry-collector/processor/googlepolicyprocessor
 
-go 1.26.0
+go 1.26.6
 
 require (
+	github.com/GoogleCloudPlatform/opentelemetry-operations-collector v0.0.0-00010101000000-000000000000
+	github.com/GoogleCloudPlatform/opentelemetry-operations-collector/pkg/googlepolicy v0.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/collector/component v1.66.0
-	go.opentelemetry.io/collector/component/componenttest v0.156.0
+	go.opentelemetry.io/collector/component/componenttest v0.159.0
 	go.opentelemetry.io/collector/confmap v1.66.0
 	go.opentelemetry.io/collector/consumer v1.66.0
 	go.opentelemetry.io/collector/consumer/consumertest v0.160.0
@@ -15,10 +17,12 @@ require (
 	go.opentelemetry.io/collector/processor/processortest v0.156.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.28.0
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
@@ -44,10 +48,15 @@ require (
 	go.opentelemetry.io/collector/processor/xprocessor v0.156.0 // indirect
 	go.opentelemetry.io/otel v1.46.0 // indirect
 	go.opentelemetry.io/otel/metric v1.46.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.44.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.45.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.45.0 // indirect
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.47.0 // indirect
+)
+
+replace (
+	github.com/GoogleCloudPlatform/opentelemetry-operations-collector => ../../../..
+	github.com/GoogleCloudPlatform/opentelemetry-operations-collector/pkg/googlepolicy => ../../../../pkg/googlepolicy
 )
