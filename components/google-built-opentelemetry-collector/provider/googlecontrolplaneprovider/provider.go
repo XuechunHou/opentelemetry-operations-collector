@@ -65,7 +65,7 @@ var (
 
 var (
 	BuiltInDestinationPolicy = &gcpdestination.GCPDestinationPolicy{Name: "default_gcp_destination"}
-	BuiltInSelfMetricsPolicy = &selfmetrics.SelfMetricsPolicy{Name: "default_self_metrics"}
+	BuiltInSelfMetricsPolicy = &selfmetrics.SelfMetricsPolicy{Name: "default_self_metrics", Port: 18888}
 )
 
 const (
@@ -179,7 +179,28 @@ func (p *provider) evaluateActivePolicySet(ctx context.Context) (*confmap.Retrie
 		collectorID = v
 	}
 
+	// resolveFleetID covers ctx-then-environment; upstream additionally falls
+	// back to the ?fleet= query parameter on the manager URI, and propagates
+	// both IDs back onto the context because the self-metrics policy reads
+	// PROJECT_ID from there.
 	fleetID := resolveFleetID(ctx)
+	if fleetID == "" && p.manager != nil && p.manager.URI() != nil {
+		fleetID = p.manager.URI().Query().Get("fleet")
+	}
+	if fleetID != "" {
+		ctx = context.WithValue(ctx, "FLEET_ID", fleetID)
+	}
+
+	var projectID string
+	if v, ok := ctx.Value("PROJECT_ID").(string); ok && v != "" {
+		projectID = v
+	}
+	if projectID == "" && p.manager != nil && p.manager.URI() != nil {
+		projectID = p.manager.URI().Query().Get("project")
+	}
+	if projectID != "" {
+		ctx = context.WithValue(ctx, "PROJECT_ID", projectID)
+	}
 
 	// Get a copy of the current active policy set from `pkg/googlepolicy`. If there is
 	// no active policy set detected, we will only evaluate the built-in policies.

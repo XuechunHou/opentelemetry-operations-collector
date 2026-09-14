@@ -18,7 +18,6 @@ import (
 	"net/url"
 	"testing"
 
-	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -108,12 +107,7 @@ func TestExtractRawPolicies_TelemetryCollector(t *testing.T) {
 	require.NoError(t, err)
 
 	collector := &xdsv1alpha1.TelemetryCollector{
-		Policies: []*corev3.TypedExtensionConfig{
-			{
-				Name:        "test-filter",
-				TypedConfig: policyAny,
-			},
-		},
+		Policies: []*anypb.Any{policyAny},
 	}
 
 	collectorAny, err := anypb.New(collector)
@@ -127,13 +121,15 @@ func TestExtractRawPolicies_TelemetryCollector(t *testing.T) {
 	rawPolicies, err := extractRawPolicies(resp)
 	require.NoError(t, err)
 	require.Len(t, rawPolicies, 1)
+	// Both of these come from the policy body itself -- policies are bare
+	// google.protobuf.Any values, so there is no enclosing wrapper to read.
 	assert.Equal(t, "test-filter", rawPolicies[0]["name"])
 	assert.Equal(t, "mock_transformation", rawPolicies[0]["type"])
 }
 
-func TestExtractRawPolicies_BackfillsNameAndType(t *testing.T) {
-	// A policy body that repeats neither the name nor the type: both must be
-	// recovered from the enclosing TypedExtensionConfig.
+func TestExtractRawPolicies_BackfillsType(t *testing.T) {
+	// A policy body that does not state its own type: it has to be recovered
+	// from the type URL of the enclosing Any.
 	payload, err := structpb.NewStruct(map[string]any{"some_field": "some_value"})
 	require.NoError(t, err)
 
@@ -141,9 +137,7 @@ func TestExtractRawPolicies_BackfillsNameAndType(t *testing.T) {
 	require.NoError(t, err)
 
 	collectorAny, err := anypb.New(&xdsv1alpha1.TelemetryCollector{
-		Policies: []*corev3.TypedExtensionConfig{
-			{Name: "backfilled-policy", TypedConfig: payloadAny},
-		},
+		Policies: []*anypb.Any{payloadAny},
 	})
 	require.NoError(t, err)
 
@@ -153,10 +147,11 @@ func TestExtractRawPolicies_BackfillsNameAndType(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, rawPolicies, 1)
-	assert.Equal(t, "backfilled-policy", rawPolicies[0]["name"])
 	// structpb.Struct -> "type.googleapis.com/google.protobuf.Struct" -> "Struct".
 	assert.Equal(t, "Struct", rawPolicies[0]["type"])
 	assert.Equal(t, "some_value", rawPolicies[0]["some_field"])
+	// Nothing supplies a name any more when the body does not carry one.
+	assert.NotContains(t, rawPolicies[0], "name")
 }
 
 func TestExtractRawPolicies_Errors(t *testing.T) {
@@ -186,24 +181,23 @@ func TestExtractRawPolicies_Errors(t *testing.T) {
 			wantCount: 0,
 		},
 		{
-			name: "policy with no typed_config",
+			name: "policy with empty Any",
 			resources: func() []*anypb.Any {
 				collectorAny, err := anypb.New(&xdsv1alpha1.TelemetryCollector{
-					Policies: []*corev3.TypedExtensionConfig{{Name: "no-body"}},
+					Policies: []*anypb.Any{{}},
 				})
 				require.NoError(t, err)
 				return []*anypb.Any{collectorAny}
 			}(),
-			wantErr:     ErrXDSPolicyMissingBody,
-			wantErrText: "no-body",
+			wantErr: ErrXDSPolicyMissingBody,
+			// A bare Any carries no name, so the index is the only identifier.
+			wantErrText: "index 0",
 		},
 		{
 			name: "policy with unregistered type URL",
 			resources: func() []*anypb.Any {
 				collectorAny, err := anypb.New(&xdsv1alpha1.TelemetryCollector{
-					Policies: []*corev3.TypedExtensionConfig{
-						{Name: "unknown-type", TypedConfig: unknownTypeAny},
-					},
+					Policies: []*anypb.Any{unknownTypeAny},
 				})
 				require.NoError(t, err)
 				return []*anypb.Any{collectorAny}
@@ -215,10 +209,7 @@ func TestExtractRawPolicies_Errors(t *testing.T) {
 			name: "valid and invalid policies in one collector",
 			resources: func() []*anypb.Any {
 				collectorAny, err := anypb.New(&xdsv1alpha1.TelemetryCollector{
-					Policies: []*corev3.TypedExtensionConfig{
-						{Name: "good-policy", TypedConfig: validPayloadAny},
-						{Name: "unknown-type", TypedConfig: unknownTypeAny},
-					},
+					Policies: []*anypb.Any{validPayloadAny, unknownTypeAny},
 				})
 				require.NoError(t, err)
 				return []*anypb.Any{collectorAny}
@@ -310,12 +301,7 @@ func TestXDSPolicyLifecycle_SetActivePolicySet(t *testing.T) {
 	require.NoError(t, err)
 
 	collector := &xdsv1alpha1.TelemetryCollector{
-		Policies: []*corev3.TypedExtensionConfig{
-			{
-				Name:        "log-filter-policy",
-				TypedConfig: policyAny,
-			},
-		},
+		Policies: []*anypb.Any{policyAny},
 	}
 
 	collectorAny, err := anypb.New(collector)

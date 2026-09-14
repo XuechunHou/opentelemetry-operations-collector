@@ -611,29 +611,29 @@ func policiesFromCollector(collector *xdsv1alpha1.TelemetryCollector) ([]map[str
 		errs        []error
 	)
 
-	for i, policyExt := range collector.GetPolicies() {
-		name := policyExt.GetName()
-		if policyExt.GetTypedConfig() == nil {
-			errs = append(errs, fmt.Errorf("%w: policy %q at index %d", ErrXDSPolicyMissingBody, name, i))
+	for i, policyAny := range collector.GetPolicies() {
+		if policyAny == nil || policyAny.GetTypeUrl() == "" {
+			errs = append(errs, fmt.Errorf("%w: policy at index %d", ErrXDSPolicyMissingBody, i))
 			continue
 		}
+		typeURL := policyAny.GetTypeUrl()
 
-		raw, err := rawFromAny(policyExt.GetTypedConfig())
+		raw, err := rawFromAny(policyAny)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("policy %q at index %d: %w", name, i, err))
+			errs = append(errs, fmt.Errorf("policy at index %d (%q): %w", i, typeURL, err))
 			continue
 		}
 
-		// The policy body does not have to repeat the name and type that the
-		// enclosing TypedExtensionConfig already carries, so backfill them.
-		if _, ok := raw["name"]; !ok && name != "" {
-			raw["name"] = name
-		}
+		// Policies now arrive as a bare google.protobuf.Any rather than being
+		// wrapped in an envoy TypedExtensionConfig, so the type URL is the only
+		// identity carried outside the body. There is no enclosing name to
+		// backfill any more -- a driver that needs one reads it from the body
+		// (the filter policies use their own "id" field).
 		if _, ok := raw["type"]; !ok {
-			policyType := policyTypeFromTypeURL(policyExt.GetTypedConfig().GetTypeUrl())
+			policyType := policyTypeFromTypeURL(typeURL)
 			if policyType == "" {
-				errs = append(errs, fmt.Errorf("%w: policy %q at index %d has no 'type' field and its type URL %q is unusable",
-					ErrXDSResourceNotPolicy, name, i, policyExt.GetTypedConfig().GetTypeUrl()))
+				errs = append(errs, fmt.Errorf("%w: policy at index %d has no 'type' field and its type URL %q is unusable",
+					ErrXDSResourceNotPolicy, i, typeURL))
 				continue
 			}
 			raw["type"] = policyType

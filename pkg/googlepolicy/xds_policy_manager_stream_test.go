@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -157,9 +156,7 @@ func policyResource(t *testing.T, name, policyType string) *anypb.Any {
 	require.NoError(t, err)
 
 	collectorAny, err := anypb.New(&xdsv1alpha1.TelemetryCollector{
-		Policies: []*corev3.TypedExtensionConfig{
-			{Name: name, TypedConfig: payloadAny},
-		},
+		Policies: []*anypb.Any{payloadAny},
 	})
 	require.NoError(t, err)
 
