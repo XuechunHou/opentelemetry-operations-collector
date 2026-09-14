@@ -9,10 +9,10 @@ require (
 	go.opentelemetry.io/collector/component v1.66.0
 	go.opentelemetry.io/collector/component/componenttest v0.159.0
 	go.opentelemetry.io/collector/confmap v1.66.0
-	go.opentelemetry.io/collector/consumer v1.66.0
-	go.opentelemetry.io/collector/consumer/consumertest v0.160.0
+	go.opentelemetry.io/collector/consumer v1.62.0
+	go.opentelemetry.io/collector/consumer/consumertest v0.156.0
 	go.opentelemetry.io/collector/pdata v1.66.0
-	go.opentelemetry.io/collector/processor v1.66.0
+	go.opentelemetry.io/collector/processor v1.62.0
 	go.opentelemetry.io/collector/processor/processorhelper v0.156.0
 	go.opentelemetry.io/collector/processor/processortest v0.156.0
 	go.uber.org/goleak v1.3.0
@@ -50,12 +50,12 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector/component/componentstatus v0.156.0 // indirect
-	go.opentelemetry.io/collector/consumer/xconsumer v0.160.0 // indirect
+	go.opentelemetry.io/collector/consumer/xconsumer v0.156.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.66.0 // indirect
-	go.opentelemetry.io/collector/internal/componentalias v0.160.0 // indirect
-	go.opentelemetry.io/collector/pdata/pprofile v0.160.0 // indirect
-	go.opentelemetry.io/collector/pdata/testdata v0.160.0 // indirect
-	go.opentelemetry.io/collector/pipeline v1.66.0 // indirect
+	go.opentelemetry.io/collector/internal/componentalias v0.156.0 // indirect
+	go.opentelemetry.io/collector/pdata/pprofile v0.159.0 // indirect
+	go.opentelemetry.io/collector/pdata/testdata v0.156.0 // indirect
+	go.opentelemetry.io/collector/pipeline v1.62.0 // indirect
 	go.opentelemetry.io/collector/processor/xprocessor v0.156.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
 	go.opentelemetry.io/otel v1.46.0 // indirect
@@ -75,7 +75,6 @@ require (
 	google.golang.org/grpc v1.83.2 // indirect
 )
 
-replace (
-	github.com/GoogleCloudPlatform/opentelemetry-operations-collector => ../../../..
-	github.com/GoogleCloudPlatform/opentelemetry-operations-collector/pkg/googlepolicy => ../../../../pkg/googlepolicy
-)
+replace github.com/GoogleCloudPlatform/opentelemetry-operations-collector => ../../../..
+
+replace github.com/GoogleCloudPlatform/opentelemetry-operations-collector/pkg/googlepolicy => ../../../../pkg/googlepolicy
