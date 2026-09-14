@@ -24,6 +24,10 @@ import (
 	"strings"
 
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-collector/components/google-built-opentelemetry-collector/provider/googlecontrolplaneprovider/policies/gcpdestination"
+	// Imported for its init(), which registers the LogFilterPolicy driver. The
+	// policy is consumed by googlepolicyprocessor rather than by this provider,
+	// so there is no direct reference to the package.
+	_ "github.com/GoogleCloudPlatform/opentelemetry-operations-collector/components/google-built-opentelemetry-collector/provider/googlecontrolplaneprovider/policies/logfilter"
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-collector/components/google-built-opentelemetry-collector/provider/googlecontrolplaneprovider/policies/selfmetrics"
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-collector/pkg/googlepolicy"
 	"go.opentelemetry.io/collector/confmap"
@@ -139,7 +143,7 @@ func (p *provider) Retrieve(ctx context.Context, uri string, watcher confmap.Wat
 			return nil, fmt.Errorf("%q: %w", uri, err)
 		}
 	case innerSchemeXDS:
-		p.manager, err = NewXDSPolicyManager(p.logger, target, watcher)
+		p.manager, err = googlepolicy.NewXDSPolicyManager(p.logger, target, CollectorID, resolveFleetID(ctx), watcher)
 		if err != nil {
 			return nil, fmt.Errorf("%q: %w", uri, err)
 		}
@@ -154,6 +158,17 @@ func (p *provider) Retrieve(ctx context.Context, uri string, watcher confmap.Wat
 	return p.evaluateActivePolicySet(ctx)
 }
 
+// resolveFleetID determines the fleet this collector belongs to, preferring an
+// explicit value on the context over the ambient environment.
+func resolveFleetID(ctx context.Context) string {
+	if ctx != nil {
+		if v, ok := ctx.Value("FLEET_ID").(string); ok && v != "" {
+			return v
+		}
+	}
+	return os.Getenv("FLEET_ID")
+}
+
 func (p *provider) evaluateActivePolicySet(ctx context.Context) (*confmap.Retrieved, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -164,10 +179,7 @@ func (p *provider) evaluateActivePolicySet(ctx context.Context) (*confmap.Retrie
 		collectorID = v
 	}
 
-	fleetID := os.Getenv("FLEET_ID")
-	if v, ok := ctx.Value("FLEET_ID").(string); ok && v != "" {
-		fleetID = v
-	}
+	fleetID := resolveFleetID(ctx)
 
 	// Get a copy of the current active policy set from `pkg/googlepolicy`. If there is
 	// no active policy set detected, we will only evaluate the built-in policies.

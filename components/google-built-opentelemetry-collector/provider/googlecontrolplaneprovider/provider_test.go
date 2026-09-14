@@ -230,6 +230,34 @@ func TestRetrieve_NoFleetID(t *testing.T) {
 	assert.NoError(t, p.Shutdown(context.Background()))
 }
 
+// TestRetrieve_XDSServerUnreachable asserts that a control plane that is down
+// does not stop the collector from starting: the xDS connection is retried in
+// the background while the collector comes up on its built-in policies.
+func TestRetrieve_XDSServerUnreachable(t *testing.T) {
+	t.Setenv("FLEET_ID", "1234")
+	p := createProvider()
+
+	// Port 1 on loopback: nothing is listening, so the connection cannot be
+	// established and the manager is left retrying with backoff.
+	ret, err := p.Retrieve(context.Background(), "googlecontrolplane:xds://127.0.0.1:1?insecure=true", nil)
+	require.NoError(t, err, "an unreachable xDS control plane must not block collector startup")
+	require.NotNil(t, ret)
+
+	conf, err := ret.AsConf()
+	require.NoError(t, err)
+
+	// The built-in destination and self metrics policies are still applied...
+	assert.True(t, conf.IsSet("exporters::otlp_grpc/default_gcp_destination"))
+	assert.True(t, conf.IsSet("receivers::otlp/default_self_metrics"))
+
+	// ...so the collector always has at least one pipeline to stand up with,
+	// even though no policies were ever received from the control plane.
+	assert.True(t, conf.IsSet("service::pipelines::metrics/default_self_metrics"))
+	assert.True(t, conf.IsSet("service::pipelines::logs/default_self_metrics"))
+
+	assert.NoError(t, p.Shutdown(context.Background()))
+}
+
 func TestRetrieve_MultipleDestinationPolicies(t *testing.T) {
 	t.Setenv("FLEET_ID", "1234")
 	p := createProvider()
